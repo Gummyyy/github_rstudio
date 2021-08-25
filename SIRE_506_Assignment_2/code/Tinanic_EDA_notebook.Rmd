@@ -2,17 +2,60 @@
 title: "R Notebook"
 output: html_notebook
 ---
-
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
-
+install data manipulator package
 ```{r}
-plot(cars)
+install.packages("tidyverse")
+install.packages("ggplot2")
+install.packages("gridExtra")
+```
+Loading core library
+```{r}
+#Load core tidyverse package
+library(tidyverse)
+library(ggplot2)
+library(grid)
+library(gridExtra)
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+Titanic EDA
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+read data
+data set is store under data directory
+```{r}
+dataset <- read.csv(file = "../data/train.csv")
+```
+
+let's explore our dataset
+```{r}
+
+glimpse(dataset)
+
+```
+
+
+
+
+```{r}
+type <- c("int","int","int","chr","chr","dbl","int","int","chr","dbl","chr","chr")
+description <- c("Passenger identification number","is Survived","Ticket Class","Passenger Name","Sex","Age in years","No. of sibling / spouses aboard the Tinatic","No. of parents, children aboard the Titanic","Ticket Number","Passenger fare","Cabin number","Port of Embarkation")
+Key <- c("","0 = NO, 1= YES ","","","","","","","","","","")
+meta_data <- matrix(c(colnames(dataset),type,description,Key),nrow= 12, ncol=4)
+meta_data 
+
+```
+```{r}
+colnames(meta_data) <- c("Features","Data Type","Definition","Key")
+grid.newpage()
+grid.table(meta_data)
+```
+
+
+column list
+- Survived 
+- Pclass
+
+
+
+
+from the summary, we could see that from survived variable 
