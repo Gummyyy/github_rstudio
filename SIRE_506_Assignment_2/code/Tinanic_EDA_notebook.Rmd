@@ -4,6 +4,7 @@ output: html_notebook
 ---
 install data manipulator package
 ```{r}
+install.packages("funModeling")
 install.packages("tidyverse")
 install.packages("ggplot2")
 install.packages("gridExtra")
@@ -15,6 +16,8 @@ library(tidyverse)
 library(ggplot2)
 library(grid)
 library(gridExtra)
+library(funModeling)
+library(scales)
 ```
 
 Titanic EDA
@@ -29,26 +32,125 @@ dataset <- read.csv(file = "../data/train.csv")
 let's explore our dataset
 ```{r}
 
-glimpse(dataset)
+head(dataset)
 
 ```
 
-
-
-
+insight from r 
 ```{r}
-type <- c("int","int","int","chr","chr","dbl","int","int","chr","dbl","chr","chr")
-description <- c("Passenger identification number","is Survived","Ticket Class","Passenger Name","Sex","Age in years","No. of sibling / spouses aboard the Tinatic","No. of parents, children aboard the Titanic","Ticket Number","Passenger fare","Cabin number","Port of Embarkation")
-Key <- c("","0 = NO, 1= YES ","","","","","","","","","","")
+dataset
+status(dataset)
+```
+Summary of the data
+```{r}
+type <- c("int","int","int","chr","chr","numeric","int","int","chr","numeric","chr","chr")
+description <- c("Passenger identification number","is Survived","Ticket Class","Passenger Name","Sex","Age in years","No. of sibling/spouses aboard the Tinatic","No. of parents, children aboard the Titanic","Ticket Number","Passenger fare","Cabin number","Port of Embarkation")
+Key <- c("","0 = NO, 1= YES ","1 = 1st, 2 = 2nd, 3 = 3rd","","","","","","","","","C=Cherbourg ,\nQ=Queenstown,\nS=Southampton")
 meta_data <- matrix(c(colnames(dataset),type,description,Key),nrow= 12, ncol=4)
-meta_data 
-
-```
-```{r}
-colnames(meta_data) <- c("Features","Data Type","Definition","Key")
+colnames(meta_data) <- c("Feature Name","Data Type","Definition","Key")
 grid.newpage()
 grid.table(meta_data)
+
 ```
+
+
+
+begins by tidy up the data
+
+Removing Descriptive data with no use in this analysis(name,Ticket number, cabin, and ID)
+```{r}
+#Remove descriptive cols and store as dataset_exclude_Des
+dataset_exclude_Des <- select(dataset, -Name, -Ticket, -Cabin, -PassengerId)
+#Remove rows with NA and store as dataset_exclude_NA
+dataset_cleaned <- na.omit(dataset_exclude_Des)
+glimpse(dataset_cleaned)
+```
+
+One last time, checking that our data is good to go!
+```{r}
+summary(data_integrity(dataset_cleaned))
+
+```
+Now let observe the overall statisical summary of our data set
+
+```{r}
+profiling_num(dataset_cleaned)
+```
+
+
+
+First Let's see the protortion of survival from dataset.
+
+
+
+
+```{r}
+##Survived
+freqtable <- table(dataset_cleaned$Survived)
+df <- as.data.frame.table(freqtable)
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+df$lab <- paste(df$Freq,paste("(",df$lab,"%)",sep=""),sep=" ")
+head(df)
+
+x_label = c("Death", "Alive")
+theme_set(theme_classic())
+g <- ggplot(df, aes( x_label, Freq, fill= x_label))
+g + geom_bar(stat="identity", width = 0.5)  +scale_fill_manual(values = c( "#00B32C","#B3000C"))+  geom_text(data=df,aes(x=x_label,y=Freq,label=lab),vjust=-.3) + 
+      labs(title="Bar Chart", 
+           subtitle="Survival rate from Titanic Dataset", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text(angle=65, vjust=0.6))
+```
+From this graph this implies  that from this dataset the survival rate  regardless to any feature is only about 40% from all passenger which is slightly less than half of all passenger aboard.
+
+
+
+Since, Survival rate is the mandatory key which we want to know, so nows on , we going to see each proportion compare to surivalrate
+
+```{r}
+freqtable <- table(dataset_cleaned$Pclass)
+df <- as.data.frame.table(freqtable)
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+df$lab <- paste(df$Freq,paste("(",df$lab,"%)",sep=""),sep=" ")
+head(df)
+
+x_label = c("First Class", "Second Class", "Third Class")
+theme_set(theme_classic())
+g <- ggplot(df, aes( x_label, Freq))
+g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df,aes(x=x_label,y=Freq,label=lab),vjust=0) + 
+      labs(title="Bar Chart", 
+           subtitle="Ticket Class proportion from Titanic Dataset", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text(angle=65, vjust=0.6))
+
+```
+
+
+  Almost half of the passenger 
+
+```{r}
+##Survived
+freqtable <- table(dataset_cleaned$Survived)
+df <- as.data.frame.table(freqtable)
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+df$lab <- paste(df$Freq,paste("(",df$lab,"%)",sep=""),sep=" ")
+head(df)
+
+x_label = c("Death", "Alive")
+theme_set(theme_classic())
+g <- ggplot(df, aes( x_label, Freq))
+g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df,aes(x=x_label,y=Freq,label=lab),vjust=0) + 
+      labs(title="Bar Chart", 
+           subtitle="Survival rate from Titanic Dataset", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text(angle=65, vjust=0.6))
+```
+```{r}
+plot_num(dataset_cleaned)
+```
+
+
+
 
 
 column list
