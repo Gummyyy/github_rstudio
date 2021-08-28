@@ -8,16 +8,17 @@ install.packages("funModeling")
 install.packages("tidyverse")
 install.packages("ggplot2")
 install.packages("gridExtra")
+install.packages("psych")
 ```
 Loading core library
 ```{r}
-#Load core tidyverse package
 library(tidyverse)
 library(ggplot2)
 library(grid)
 library(gridExtra)
 library(funModeling)
 library(scales)
+library(psych)
 ```
 
 Titanic EDA
@@ -39,7 +40,8 @@ head(dataset)
 insight from r 
 ```{r}
 dataset
-status(dataset)
+metadata <-status(dataset)
+write.table(metadata, file = "metadata.csv", sep = ",", row.names = FALSE) 
 ```
 Summary of the data
 ```{r}
@@ -57,13 +59,19 @@ grid.table(meta_data)
 
 begins by tidy up the data
 
+
+
 Removing Descriptive data with no use in this analysis(name,Ticket number, cabin, and ID)
 ```{r}
 #Remove descriptive cols and store as dataset_exclude_Des
 dataset_exclude_Des <- select(dataset, -Name, -Ticket, -Cabin, -PassengerId)
+#Add Na field to "" data
+dataset_exclude_Des <- dataset_exclude_Des %>% mutate_all(na_if,"")
 #Remove rows with NA and store as dataset_exclude_NA
 dataset_cleaned <- na.omit(dataset_exclude_Des)
+#refactor the string value into group 
 glimpse(dataset_cleaned)
+write.table(dataset_cleaned, file = "../result/train_cleaned.csv", sep = ",", row.names = FALSE) 
 ```
 
 One last time, checking that our data is good to go!
@@ -74,8 +82,33 @@ summary(data_integrity(dataset_cleaned))
 Now let observe the overall statisical summary of our data set
 
 ```{r}
-profiling_num(dataset_cleaned)
+dataset_summary <- data.frame(dataset_cleaned)
+dataset_summary$Sex =  as.factor(dataset_summary $Sex)
+dataset_summary$Embarked =  as.factor(dataset_summary$Embarked)
+dataset_summary$Survived = as.factor(dataset_summary$Survived)
+dataset_summary$Pclass = as.factor(dataset_summary$Pclass)
+dataset_summary$SibSp = as.factor(dataset_summary$SibSp)
+dataset_summary$Parch = as.factor(dataset_summary$Parch)
+summary(dataset_summary )
 ```
+
+```{r}
+library(Hmisc)
+dataset_quantitative <-  dataset_summary[,c("Age","Fare")]
+describe(dataset_quantitative)
+write.table(dataset_quantitative, file = "../result/summary_quantitative.csv", sep = ",", row.names = FALSE) 
+```
+
+
+
+```{r}
+descriptive_summary <-describe(dataset_cleaned)
+write.table(descriptive_summary, file = "../result/descriptive_summary.csv", sep = ",", row.names = FALSE) 
+grid.newpage()
+grid.table(descriptive_summary)
+```
+
+
 
 
 
@@ -86,65 +119,380 @@ First Let's see the protortion of survival from dataset.
 
 ```{r}
 ##Survived
-freqtable <- table(dataset_cleaned$Survived)
+freqtable <- table(Survived = dataset_cleaned$Survived)
 df <- as.data.frame.table(freqtable)
+df$Proportion <- df$Freq/712
 df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
-df$lab <- paste(df$Freq,paste("(",df$lab,"%)",sep=""),sep=" ")
+##df$lab <- paste(df$Freq,paste("(",df$lab,"%)",sep=""),sep=" ")
+df$lab <- paste(paste(df$lab,"%",sep=""),sep=" ")
 head(df)
 
-x_label = c("Death", "Alive")
 theme_set(theme_classic())
-g <- ggplot(df, aes( x_label, Freq, fill= x_label))
-g + geom_bar(stat="identity", width = 0.5)  +scale_fill_manual(values = c( "#00B32C","#B3000C"))+  geom_text(data=df,aes(x=x_label,y=Freq,label=lab),vjust=-.3) + 
-      labs(title="Bar Chart", 
-           subtitle="Survival rate from Titanic Dataset", 
+g <- ggplot(df, aes( Survived, Proportion, fill= Survived))
+g + geom_bar(stat="identity", width = 0.5)  +scale_fill_manual(values = c("#B3000C", "#00B32C"))+  geom_text(data=df,aes(x=Survived,y=Proportion,label=lab),vjust=-.3) + 
+      labs(title="Survival rate from Titanic Dataset", 
+
            caption="Source: Titanic Dataset(Kaggle)") +
-      theme(axis.text.x = element_text(angle=65, vjust=0.6))
+      theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
 ```
 From this graph this implies  that from this dataset the survival rate  regardless to any feature is only about 40% from all passenger which is slightly less than half of all passenger aboard.
+
+
+Male & Female
+```{r}
+freqtable <- table(Sex = dataset_cleaned$Sex)
+df <- as.data.frame.table(freqtable)
+df$Proportion <- df$Freq/712
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
+head(df)
+
+theme_set(theme_classic())
+g <- ggplot(df, aes( Sex, Proportion))
+g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df,aes(Sex,y=Proportion,label=lab),vjust=-.3) + 
+      labs(title="Gender proportion from Titanic Dataset", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
+
+```
+
+
+```{r}
+freqtable <- table(SibSp = dataset_cleaned$SibSp)
+df <- as.data.frame.table(freqtable)
+df$Proportion <- df$Freq/712
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
+head(df)
+
+theme_set(theme_classic())
+g <- ggplot(df, aes( SibSp, Proportion))
+g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df,aes(SibSp,y=Proportion,label=lab),vjust=-.3) + 
+      labs(title="Number of Sibling and/or spouse proportion from Titanic Dataset", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
+
+```
+
+```{r}
+freqtable <- table(Parch = dataset_cleaned$Parch)
+df <- as.data.frame.table(freqtable)
+df$Proportion <- df$Freq/712
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
+head(df)
+
+theme_set(theme_classic())
+g <- ggplot(df, aes( Parch, Proportion))
+g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df,aes(Parch,y=Proportion,label=lab),vjust=-.3) + 
+      labs(title="Number of Parent and/or Children proportion from Titanic Dataset", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
+```
+
+```{r}
+freqtable <- table(Embarked = dataset_cleaned$Embarked)
+df <- as.data.frame.table(freqtable)
+df$Proportion <- df$Freq/712
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
+head(df)
+
+theme_set(theme_classic())
+g <- ggplot(df, aes( Embarked, Proportion))
+g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df,aes(Embarked,y=Proportion,label=lab),vjust=-.3) + 
+      labs(title="Embarked proportion from Titanic Dataset", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
+```
 
 
 
 Since, Survival rate is the mandatory key which we want to know, so nows on , we going to see each proportion compare to surivalrate
 
 ```{r}
-freqtable <- table(dataset_cleaned$Pclass)
+freqtable <- table(Class = dataset_cleaned$Pclass)
 df <- as.data.frame.table(freqtable)
+df$Proportion <- df$Freq/712
 df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
-df$lab <- paste(df$Freq,paste("(",df$lab,"%)",sep=""),sep=" ")
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
 head(df)
 
-x_label = c("First Class", "Second Class", "Third Class")
 theme_set(theme_classic())
-g <- ggplot(df, aes( x_label, Freq))
-g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df,aes(x=x_label,y=Freq,label=lab),vjust=0) + 
-      labs(title="Bar Chart", 
-           subtitle="Ticket Class proportion from Titanic Dataset", 
+g <- ggplot(df, aes( Class, Proportion))
+g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df,aes(Class,y=Proportion,label=lab),vjust=-.3) + 
+      labs(title="Ticket Class proportion from Titanic Dataset", 
            caption="Source: Titanic Dataset(Kaggle)") +
-      theme(axis.text.x = element_text(angle=65, vjust=0.6))
+      theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
 
 ```
 
 
-  Almost half of the passenger 
+  Almost half of the passenger is in 
 
 ```{r}
 ##Survived
-freqtable <- table(dataset_cleaned$Survived)
+freqtable <- table(Class=dataset_cleaned$Pclass,Survived=dataset_cleaned$Survived)
 df <- as.data.frame.table(freqtable)
 df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
-df$lab <- paste(df$Freq,paste("(",df$lab,"%)",sep=""),sep=" ")
+#get sum of each class
+df$sum_class <- ave(df$Freq,df$Class,FUN=sum)
+
+df$lab_class <- as.character(round(100 * df$Freq /df$sum_class,digit=2))
+df$Proportion <- df$Freq /df$sum_class
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
+df$lab_class <- paste(paste("",df$lab_class,"%",sep=""),sep=" ")
+
 head(df)
 
-x_label = c("Death", "Alive")
+x_label <- c("First Class", "Second Class", "Third Class")
+type <- c("Death", "Alive")
 theme_set(theme_classic())
-g <- ggplot(df, aes( x_label, Freq))
-g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df,aes(x=x_label,y=Freq,label=lab),vjust=0) + 
-      labs(title="Bar Chart", 
-           subtitle="Survival rate from Titanic Dataset", 
+g <- ggplot(df, aes( Class, Proportion, fill=Survived))
+g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(values = c( "#B3000C","#00B32C")) +
+  geom_text(data=df,aes(x=Class,y=Proportion,label=lab_class),vjust=-.3,position=position_dodge(width= .95))+
+      labs(title="Proportion of Survival in each Ticket class on Titanic Data set", 
            caption="Source: Titanic Dataset(Kaggle)") +
-      theme(axis.text.x = element_text(angle=65, vjust=0.6))
+      theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
+
 ```
+Chance to survive of each class is significantly difference. More than half of first class passenger could survived. About half of second class passenger could survived. Lastly. Only about   
+Next is Age
+
+```{r}
+
+hist(dataset_cleaned$Age,main= "Age Distribution of Titanic Passenger ", xlab = "Age", ylim = range(0,300))
+
+p <- ggplot(dataset_cleaned, aes(x=Age)) + geom_histogram(fill="tomato2") +labs(title="Distribution of Passenger Age on Titanic", 
+           caption="Source: Titanic Dataset(Kaggle)")
+p
+```
+Now let see the proportion of survival from age range
+
+```{r}
+p <- ggplot(dataset_cleaned, aes(y=Age, x= factor(Survived),fill=factor(Survived)))+ scale_y_continuous("Age") +geom_boxplot()+ geom_dotplot(binaxis='y', stackdir='center', dotsize=0.5)
+p
+```
+
+```{r}
+p <- ggplot(dataset_cleaned, aes(x=Age,fill=factor(Survived))) + geom_histogram(position="identity", alpha= 0.5) +scale_fill_manual(values=c("#FF0000", "#00B32C")) +labs(title="Histrogram of survival& Death Distributed by Passenger Age on Titanic Data Set", 
+           caption="Source: Titanic Dataset(Kaggle)")
+p
+```
+
+
+```{r}
+df <- dataset_cleaned[,c("Survived","Age")]
+df_age_range <- df %>% mutate(Age_range = case_when(Age > 60   ~ '60 +',Age > 50  & Age <= 60 ~ '51 - 60',Age > 40  & Age <= 50 ~ '41 - 50',Age > 30  & Age <= 40 ~ '31 - 40',Age > 20  & Age <= 30 ~ '21 - 30',Age > 10  & Age <= 20 ~ '11 - 20',Age > 0 & Age <=10 ~ '0 - 10' ))
+df_age_range
+
+#initial
+x= df_age_range$Age_range
+y= df_age_range$Survived
+
+freqtable <- table(x,Survived = df_age_range$Survived)
+df <- as.data.frame.table(freqtable)
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+head(df)
+#get sum of each class
+df$sum_class <- ave(df$Freq,df$x,FUN=sum)
+
+df$lab_cate <- as.character(round(100 * df$Freq /df$sum_class,digit=2))
+df$Proportion <- df$Freq /df$sum_class
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
+df$lab_cate <- paste(paste("    ",df$lab_cate,"%",sep=""),sep=" ")
+
+head(df)
+
+x_label <- c("First Class", "Second Class", "Third Class")
+type <- c("Death", "Alive")
+theme_set(theme_classic())
+g <- ggplot(df, aes( x, Proportion, fill=Survived))
+g + geom_bar(stat="identity", position=position_dodge(),width=0.9,alpha=0.8)   +scale_fill_manual(values = c( "#B3000C","#00B32C")) +
+  geom_text(data=df,aes(x,y=Proportion,label=lab_cate),vjust=-.3,position=position_dodge(width=0.99), )+
+      labs(title="Survival Rate in each Age range on Titanic Data set", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text(angle=65, vjust=0.6))+ylim(0,1)
+```
+
+
+
+
+Most of survival tend to age around 30 year
+however compare all of age range, passenger with age around 0-10 have highest chance to survive
+
+
+Next, Pach & Psib
+
+```{r}
+#initial axis
+x= dataset_cleaned$Parch
+freqtable <- table(Parch=dataset_cleaned$Parch,Survived=dataset_cleaned$Survived)
+df <- as.data.frame.table(freqtable)
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+#get sum of each class
+df$sum_class <- ave(df$Freq,df$Parch,FUN=sum)
+
+df$lab_Parch <- as.character(round(100 * df$Freq /df$sum_class,digit=2))
+df$Proportion <- df$Freq /df$sum_class
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
+df$lab_Parch <- paste(paste("   ",df$lab_Parch,"%",sep=""),sep=" ")
+
+head(df)
+
+x_label <- c("First Class", "Second Class", "Third Class")
+type <- c("Death", "Alive")
+theme_set(theme_classic())
+g <- ggplot(df, aes( Parch, Proportion, fill=Survived))
+g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(values = c( "#B3000C","#00B32C")) +
+  geom_text(data=df,aes(x=Parch,y=Proportion,label=lab_Parch),vjust=-.3,position=position_dodge(width= .95))+
+      labs(title="Proportion of Survival in each Number of Parent/Child on Titanic Data set", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
+```
+
+
+
+```{r}
+#initial axis
+x= dataset_cleaned$SibSp
+freqtable <- table(SibSp=dataset_cleaned$SibSp,Survived=dataset_cleaned$Survived)
+df <- as.data.frame.table(freqtable)
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+head(df)
+#get sum of each class
+df$sum_class <- ave(df$Freq,df$SibSp,FUN=sum)
+
+df$lab_Parch <- as.character(round(100 * df$Freq /df$sum_class,digit=2))
+df$Proportion <- df$Freq /df$sum_class
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
+df$lab_Parch <- paste(paste("  ",df$lab_Parch,"%",sep=""),sep=" ")
+
+head(df)
+
+x_label <- c("First Class", "Second Class", "Third Class")
+type <- c("Death", "Alive")
+theme_set(theme_classic())
+g <- ggplot(df, aes( SibSp, Proportion, fill=Survived))
+g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(values = c( "#B3000C","#00B32C")) +
+  geom_text(data=df,aes(x=SibSp,y=Proportion,label=lab_Parch),vjust=-.3,position=position_dodge(width= .95))+
+      labs(title="Proportion of Survival in each Number of Siblings/spouses on Titanic Data set", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text(angle=65, vjust=0.6))+ylim(0,1)
+```
+
+Embarked
+
+```{r}
+x= dataset_cleaned$Embarked
+freqtable <- table(x,Survived=dataset_cleaned$Survived)
+df <- as.data.frame.table(freqtable)
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+head(df)
+#get sum of each class
+df$sum_class <- ave(df$Freq,df$x,FUN=sum)
+
+df$lab_cate <- as.character(round(100 * df$Freq /df$sum_class,digit=2))
+df$Proportion <- df$Freq /df$sum_class
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
+df$lab_cate <- paste(paste("",df$lab_cate,"%",sep=""),sep=" ")
+
+head(df)
+
+x_label <- c("First Class", "Second Class", "Third Class")
+type <- c("Death", "Alive")
+theme_set(theme_classic())
+g <- ggplot(df, aes( x, Proportion, fill=Survived))
+g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(values = c( "#B3000C","#00B32C")) +
+  geom_text(data=df,aes(x,y=Proportion,label=lab_cate),vjust=-.3,position=position_dodge(width= .95))+
+      labs(title="Proportion of Survival in each Embarked port on Titanic Data set", 
+
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text(angle=65, vjust=0.6))+ylim(0,1)
+```
+
+
+```{r}
+p <- ggplot(dataset_cleaned, aes(x=Fare)) + geom_histogram(fill="tomato2") + labs(title="Distribution of Fare on Titanic Data set", 
+           caption="Source: Titanic Dataset(Kaggle)") 
+p
+```
+
+
+```{r}
+p <- ggplot(dataset_cleaned, aes(y=Fare, x= factor(Survived),fill=factor(Survived)))+ scale_y_continuous("Fare") +geom_boxplot() +xlab("Survived")
+p
+```
+
+```{r}
+p <- ggplot(dataset_cleaned, aes(x=Fare,fill=factor(Survived))) + geom_histogram(position="identity", alpha= 0.5) +scale_fill_manual(values=c("#FF0000", "#00B32C")) +  labs(title="Histrogram of survival& Death Distributed by Fare on Titanic Data Set", 
+           caption="Source: Titanic Dataset(Kaggle)") 
+p
+```
+
+```{r}
+df <- dataset_cleaned[,c("Survived","Fare")]
+df_fare_range <- df %>% mutate(Fare_range = case_when(Fare > 200   ~ '200+',Fare > 100  & Fare <= 200 ~ '101 - 200',Fare >= 0  & Fare <= 100 ~ '0 - 100'))
+df_fare_range
+
+#initial
+x= df_fare_range$Fare_range
+y= df_fare_range$Survived
+
+freqtable <- table(x,Survived = df_fare_range$Survived)
+df <- as.data.frame.table(freqtable)
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+head(df)
+#get sum of each class
+df$sum_class <- ave(df$Freq,df$x,FUN=sum)
+
+df$lab_cate <- as.character(round(100 * df$Freq /df$sum_class,digit=2))
+df$Proportion <- df$Freq /df$sum_class
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
+df$lab_cate <- paste(paste("",df$lab_cate,"%",sep=""),sep=" ")
+
+head(df)
+
+x_label <- c("First Class", "Second Class", "Third Class")
+type <- c("Death", "Alive")
+theme_set(theme_classic())
+g <- ggplot(df, aes( x, Proportion, fill=Survived))
+g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(values = c( "#B3000C","#00B32C")) +
+  geom_text(data=df,aes(x,y=Proportion,label=lab_cate),vjust=-.3,position=position_dodge(width= .95))+
+      labs(title="Survival Rate in each Fare range on Titanic Data set", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text(angle=65, vjust=0.6))+ylim(0,1)
+ 
+```
+
+```{r}
+x= dataset_cleaned$Sex
+freqtable <- table(x,Survived=dataset_cleaned$Survived)
+df <- as.data.frame.table(freqtable)
+df$lab <- as.character(round(100 * df$Freq / sum(df$Freq),digit=2))
+head(df)
+#get sum of each class
+df$sum_class <- ave(df$Freq,df$x,FUN=sum)
+
+df$lab_cate <- as.character(round(100 * df$Freq /df$sum_class,digit=2))
+df$Proportion <- df$Freq /df$sum_class
+df$lab <- paste(paste("",df$lab,"%",sep=""),sep=" ")
+df$lab_cate <- paste(paste("",df$lab_cate,"%",sep=""),sep=" ")
+
+head(df)
+
+x_label <- c("First Class", "Second Class", "Third Class")
+type <- c("Death", "Alive")
+theme_set(theme_classic())
+g <- ggplot(df, aes( x, Proportion, fill=Survived))
+g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(values = c( "#B3000C","#00B32C")) +
+  geom_text(data=df,aes(x,y=Proportion,label=lab_cate),vjust=-.3,position=position_dodge(width= .95))+
+      labs(title="Proportion of Survival in each Gender on Titanic Data set", 
+           caption="Source: Titanic Dataset(Kaggle)") +
+      theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
+```
+
+
 ```{r}
 plot_num(dataset_cleaned)
 ```

@@ -1,0 +1,13 @@
+"variable","q_zeros","p_zeros","q_na","p_na","q_inf","p_inf","type","unique"
+"PassengerId",0,0,0,0,0,0,"integer",891
+"Survived",549,0.616161616161616,0,0,0,0,"integer",2
+"Pclass",0,0,0,0,0,0,"integer",3
+"Name",0,0,0,0,0,0,"character",891
+"Sex",0,0,0,0,0,0,"character",2
+"Age",0,0,177,0.198653198653199,0,0,"numeric",88
+"SibSp",608,0.682379349046016,0,0,0,0,"integer",7
+"Parch",678,0.760942760942761,0,0,0,0,"integer",7
+"Ticket",0,0,0,0,0,0,"character",681
+"Fare",15,0.0168350168350168,0,0,0,0,"numeric",248
+"Cabin",0,0,0,0,0,0,"character",148
+"Embarked",0,0,0,0,0,0,"character",4
