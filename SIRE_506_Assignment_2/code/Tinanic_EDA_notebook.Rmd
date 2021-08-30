@@ -9,6 +9,8 @@ install.packages("tidyverse")
 install.packages("ggplot2")
 install.packages("gridExtra")
 install.packages("psych")
+install.packages("arsenal")
+
 ```
 Loading core library
 ```{r}
@@ -18,7 +20,9 @@ library(grid)
 library(gridExtra)
 library(funModeling)
 library(scales)
-library(psych)
+##library(psych)
+library(Hmisc)
+library(arsenal)
 ```
 
 Titanic EDA
@@ -41,9 +45,9 @@ insight from r
 ```{r}
 dataset
 metadata <-status(dataset)
-write.table(metadata, file = "metadata.csv", sep = ",", row.names = FALSE) 
+write.table(metadata, file = "../result/metadata.csv", sep = ",", row.names = FALSE) 
 ```
-Summary of the data
+forming meta data table
 ```{r}
 type <- c("int","int","int","chr","chr","numeric","int","int","chr","numeric","chr","chr")
 description <- c("Passenger identification number","is Survived","Ticket Class","Passenger Name","Sex","Age in years","No. of sibling/spouses aboard the Tinatic","No. of parents, children aboard the Titanic","Ticket Number","Passenger fare","Cabin number","Port of Embarkation")
@@ -57,11 +61,8 @@ grid.table(meta_data)
 
 
 
-begins by tidy up the data
+tidy up the data
 
-
-
-Removing Descriptive data with no use in this analysis(name,Ticket number, cabin, and ID)
 ```{r}
 #Remove descriptive cols and store as dataset_exclude_Des
 dataset_exclude_Des <- select(dataset, -Name, -Ticket, -Cabin, -PassengerId)
@@ -74,12 +75,12 @@ glimpse(dataset_cleaned)
 write.table(dataset_cleaned, file = "../result/train_cleaned.csv", sep = ",", row.names = FALSE) 
 ```
 
-One last time, checking that our data is good to go!
+check data integrity
 ```{r}
 summary(data_integrity(dataset_cleaned))
 
 ```
-Now let observe the overall statisical summary of our data set
+re-factor and produce summary table
 
 ```{r}
 dataset_summary <- data.frame(dataset_cleaned)
@@ -91,31 +92,31 @@ dataset_summary$SibSp = as.factor(dataset_summary$SibSp)
 dataset_summary$Parch = as.factor(dataset_summary$Parch)
 summary(dataset_summary )
 ```
+reformat table & perform summary function to get Summary of Statistics
 
 ```{r}
-library(Hmisc)
-dataset_quantitative <-  dataset_summary[,c("Age","Fare")]
-describe(dataset_quantitative)
-write.table(dataset_quantitative, file = "../result/summary_quantitative.csv", sep = ",", row.names = FALSE) 
+
+summ_table <- tableby(~Survived + Pclass+ Sex + Age + SibSp + Parch + Fare + Embarked, data= dataset_summary )
+
+summary(summ_table, text=FALSE)
 ```
 
 
 
+
+additional information for quantitative factors
+
 ```{r}
-descriptive_summary <-describe(dataset_cleaned)
+descriptive_summary <-describe(dataset_cleaned[,c("Age","Fare")])
 write.table(descriptive_summary, file = "../result/descriptive_summary.csv", sep = ",", row.names = FALSE) 
-grid.newpage()
-grid.table(descriptive_summary)
+descriptive_summary
 ```
 
 
 
 
 
-First Let's see the protortion of survival from dataset.
-
-
-
+Survival rate proportion
 
 ```{r}
 ##Survived
@@ -135,10 +136,10 @@ g + geom_bar(stat="identity", width = 0.5)  +scale_fill_manual(values = c("#B300
            caption="Source: Titanic Dataset(Kaggle)") +
       theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
 ```
-From this graph this implies  that from this dataset the survival rate  regardless to any feature is only about 40% from all passenger which is slightly less than half of all passenger aboard.
 
 
-Male & Female
+
+Gender proportion
 ```{r}
 freqtable <- table(Sex = dataset_cleaned$Sex)
 df <- as.data.frame.table(freqtable)
@@ -156,7 +157,7 @@ g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df
 
 ```
 
-
+Sibling & Spouse proportion
 ```{r}
 freqtable <- table(SibSp = dataset_cleaned$SibSp)
 df <- as.data.frame.table(freqtable)
@@ -174,6 +175,7 @@ g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df
 
 ```
 
+Sibling & Parch proportion
 ```{r}
 freqtable <- table(Parch = dataset_cleaned$Parch)
 df <- as.data.frame.table(freqtable)
@@ -190,6 +192,8 @@ g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df
       theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
 ```
 
+
+Embarked proportion
 ```{r}
 freqtable <- table(Embarked = dataset_cleaned$Embarked)
 df <- as.data.frame.table(freqtable)
@@ -208,7 +212,7 @@ g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df
 
 
 
-Since, Survival rate is the mandatory key which we want to know, so nows on , we going to see each proportion compare to surivalrate
+Tickey class proportion
 
 ```{r}
 freqtable <- table(Class = dataset_cleaned$Pclass)
@@ -227,8 +231,30 @@ g + geom_bar(stat="identity", width = 0.5, fill="tomato2")  +  geom_text(data=df
 
 ```
 
+Age histrogram
+```{r}
 
-  Almost half of the passenger is in 
+hist(dataset_cleaned$Age,main= "Age Distribution of Titanic Passenger ", xlab = "Age", ylim = range(0,300))
+
+p <- ggplot(dataset_cleaned, aes(x=Age)) + geom_histogram(fill="tomato2") +labs(title="Distribution of Passenger Age on Titanic", 
+           caption="Source: Titanic Dataset(Kaggle)")
+p
+```
+
+
+Histogram of fare
+
+```{r}
+p <- ggplot(dataset_cleaned, aes(x=Fare)) + geom_histogram(fill="tomato2") + labs(title="Distribution of Fare on Titanic Data set", 
+           caption="Source: Titanic Dataset(Kaggle)") 
+p
+```
+
+
+
+
+
+Survival proportion of each ticket class
 
 ```{r}
 ##Survived
@@ -256,33 +282,37 @@ g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(va
       theme(axis.text.x = element_text( vjust=0.6))+ylim(0,1)
 
 ```
-Chance to survive of each class is significantly difference. More than half of first class passenger could survived. About half of second class passenger could survived. Lastly. Only about   
-Next is Age
+
+
+
+boxplot of age of both survivor & non-survivior 
+
 
 ```{r}
-
-hist(dataset_cleaned$Age,main= "Age Distribution of Titanic Passenger ", xlab = "Age", ylim = range(0,300))
-
-p <- ggplot(dataset_cleaned, aes(x=Age)) + geom_histogram(fill="tomato2") +labs(title="Distribution of Passenger Age on Titanic", 
-           caption="Source: Titanic Dataset(Kaggle)")
-p
-```
-Now let see the proportion of survival from age range
-
-```{r}
-p <- ggplot(dataset_cleaned, aes(y=Age, x= factor(Survived),fill=factor(Survived)))+ scale_y_continuous("Age") +geom_boxplot()+ geom_dotplot(binaxis='y', stackdir='center', dotsize=0.5)
-p
-```
-
-```{r}
-p <- ggplot(dataset_cleaned, aes(x=Age,fill=factor(Survived))) + geom_histogram(position="identity", alpha= 0.5) +scale_fill_manual(values=c("#FF0000", "#00B32C")) +labs(title="Histrogram of survival& Death Distributed by Passenger Age on Titanic Data Set", 
+p <- ggplot(dataset_cleaned, aes(y=Age, x= factor(Survived),fill=factor(Survived)))+ scale_y_continuous("Age") +geom_boxplot()+ geom_dotplot(binaxis='y', stackdir='center', dotsize=0.5)+ labs(title="Comparative Box plot: Age of both survivor & non-survivor on Titanic Data set", 
            caption="Source: Titanic Dataset(Kaggle)")
 p
 ```
 
 
+
+
+
+distribution of age of both survivor & non-survival
 ```{r}
+p <- ggplot(dataset_cleaned, aes(x=Age,fill=factor(Survived))) + geom_histogram(position="identity", alpha= 0.5) +scale_fill_manual(values=c("#FF0000", "#00B32C")) +labs(title="Age Distribution of both survivor & non-survivor on Titanic Data Set", 
+           caption="Source: Titanic Dataset(Kaggle)")
+p
+```
+
+
+
+Surivial rate in each age range
+
+```{r}
+
 df <- dataset_cleaned[,c("Survived","Age")]
+# devide age range into section
 df_age_range <- df %>% mutate(Age_range = case_when(Age > 60   ~ '60 +',Age > 50  & Age <= 60 ~ '51 - 60',Age > 40  & Age <= 50 ~ '41 - 50',Age > 30  & Age <= 40 ~ '31 - 40',Age > 20  & Age <= 30 ~ '21 - 30',Age > 10  & Age <= 20 ~ '11 - 20',Age > 0 & Age <=10 ~ '0 - 10' ))
 df_age_range
 
@@ -318,11 +348,10 @@ g + geom_bar(stat="identity", position=position_dodge(),width=0.9,alpha=0.8)   +
 
 
 
-Most of survival tend to age around 30 year
-however compare all of age range, passenger with age around 0-10 have highest chance to survive
 
 
-Next, Pach & Psib
+
+ Proportion of survival in each parent and/or child value
 
 ```{r}
 #initial axis
@@ -353,6 +382,10 @@ g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(va
 
 
 
+
+
+Proportion of survival in each Sibling and/or Spouse value
+
 ```{r}
 #initial axis
 x= dataset_cleaned$SibSp
@@ -381,7 +414,7 @@ g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(va
       theme(axis.text.x = element_text(angle=65, vjust=0.6))+ylim(0,1)
 ```
 
-Embarked
+Proportion of survival in each Embarked port
 
 ```{r}
 x= dataset_cleaned$Embarked
@@ -412,23 +445,25 @@ g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(va
 ```
 
 
+
+boxplot of fare of both survivor & non-survivior 
+
 ```{r}
-p <- ggplot(dataset_cleaned, aes(x=Fare)) + geom_histogram(fill="tomato2") + labs(title="Distribution of Fare on Titanic Data set", 
+p <- ggplot(dataset_cleaned, aes(y=Fare, x= factor(Survived),fill=factor(Survived)))+ scale_y_continuous("Fare") +geom_boxplot() +xlab("Survived") + labs(title="Comparative Box plot: Fare of both survivor & non-survivor on Titanic Data set", 
+           caption="Source: Titanic Dataset(Kaggle)")
+p
+```
+
+Fair Distribution of both survivor & non-survivor
+
+```{r}
+p <- ggplot(dataset_cleaned, aes(x=Fare,fill=factor(Survived))) + geom_histogram(position="identity", alpha= 0.5) +scale_fill_manual(values=c("#FF0000", "#00B32C")) +  labs(title="Fair Distribution of both survivor & non-survivor on Titanic Data Set", 
            caption="Source: Titanic Dataset(Kaggle)") 
 p
 ```
 
 
-```{r}
-p <- ggplot(dataset_cleaned, aes(y=Fare, x= factor(Survived),fill=factor(Survived)))+ scale_y_continuous("Fare") +geom_boxplot() +xlab("Survived")
-p
-```
-
-```{r}
-p <- ggplot(dataset_cleaned, aes(x=Fare,fill=factor(Survived))) + geom_histogram(position="identity", alpha= 0.5) +scale_fill_manual(values=c("#FF0000", "#00B32C")) +  labs(title="Histrogram of survival& Death Distributed by Fare on Titanic Data Set", 
-           caption="Source: Titanic Dataset(Kaggle)") 
-p
-```
+survivor proportion in each fare range
 
 ```{r}
 df <- dataset_cleaned[,c("Survived","Fare")]
@@ -465,6 +500,9 @@ g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(va
  
 ```
 
+
+survivor proportion in each gender
+
 ```{r}
 x= dataset_cleaned$Sex
 freqtable <- table(x,Survived=dataset_cleaned$Survived)
@@ -493,19 +531,4 @@ g + geom_bar(stat="identity", position=position_dodge())   +scale_fill_manual(va
 ```
 
 
-```{r}
-plot_num(dataset_cleaned)
-```
 
-
-
-
-
-column list
-- Survived 
-- Pclass
-
-
-
-
-from the summary, we could see that from survived variable 
